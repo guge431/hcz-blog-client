@@ -1,6 +1,6 @@
 const  path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-
+const webpack = require('webpack');
 // const { plugin } = require('postcss');
 const port=3001;
 
@@ -13,15 +13,15 @@ module.exports={
         compress:true,
         historyApiFallback:true,
         static:path.join(__dirname,'../dist'),
-        // proxy:{
-        //     '/api':{
-        //         target:'http://localhost:5000',
-        //         changeOrigin:true,
-        //         pathRewrite:{
-        //             '^/api':''
-        //         }
-        //     }
-        // }
+        proxy:{
+            '/api':{
+                target:'http://localhost:3000',
+                changeOrigin:true,
+                pathRewrite:{
+                    '^/api':''
+                }
+            }
+        }
 
     },
     plugins:[
@@ -29,6 +29,10 @@ module.exports={
             title: 'guge',
             filename:'index.html',
             template:path.resolve(__dirname,'../src/index-dev.html')
+        }),
+        new webpack.DefinePlugin({
+            'process.env.NODE_ENV': JSON.stringify('development'),
+            'process.env.REACT_APP_API_URL': JSON.stringify('http://localhost:3000')
         })
     ]
 
