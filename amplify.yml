@@ -3,7 +3,12 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm install
+        - |
+          if [ -f package-lock.json ]; then
+            npm ci --legacy-peer-deps
+          else
+            npm install --legacy-peer-deps
+          fi
     build:
       commands:
         - npm run build
