@@ -1,213 +1,42 @@
 version: 1
 applications:
   - frontend:
-      # 环境变量直接在这里定义
       environmentVariables:
-        # === 应用环境变量 ===
         NODE_ENV: production
         REACT_APP_API_URL: https://rsyfaexhi7.execute-api.us-east-1.amazonaws.com/dev
-        
-        # === 构建优化变量 ===
         NODE_OPTIONS: --max-old-space-size=4096
-        
-        # === NPM 配置变量 ===
         NPM_CONFIG_LEGACY_PEER_DEPS: true
         NPM_CONFIG_ENGINE_STRICT: false
-        NPM_CONFIG_FUND: false
-        NPM_CONFIG_AUDIT_LEVEL: moderate
-        
-        # === 性能优化变量 ===
-        DISABLE_ESLINT_PLUGIN: true
-        GENERATE_SOURCEMAP: false
-        SKIP_PREFLIGHT_CHECK: true
-        FAST_REFRESH: true
         
       phases:
         preBuild:
           commands:
-            # 环境信息显示
-            - echo "=== 🔍 构建环境信息 ==="
-            - echo "Node.js version:" && node --version
-            - echo "NPM version:" && npm --version
-            - echo "Current directory:" && pwd
-            - echo "Environment variables:"
-            - echo "NODE_ENV=$NODE_ENV"
-            - echo "REACT_APP_API_URL=$REACT_APP_API_URL"
-            - echo "NODE_OPTIONS=$NODE_OPTIONS"
-            
-            # 设置 NPM 配置
-            - echo "=== ⚙️  配置 NPM ==="
-            - npm config set fund false
-            - npm config set audit-level moderate
-            - npm config set engine-strict false
+            - echo "Starting preBuild phase"
+            - node --version
+            - npm --version
             - npm config set legacy-peer-deps true
-            - npm config set registry https://registry.npmjs.org/
-            
-            # 清理缓存
-            - echo "=== 🧹 清理缓存 ==="
-            - npm cache clean --force || echo "Cache clean warning - continuing..."
-            
-            # 显示项目信息
-            - echo "=== 📋 项目信息 ==="
-            - echo "Package.json检查:"
-            - ls -la package.json
-            - echo "Build script:" && (cat package.json | grep '"build"' || echo "No build script found")
-            
-            # 智能依赖安装
-            - echo "=== 📦 安装依赖 ==="
+            - npm config set engine-strict false
+            - npm cache clean --force
             - |
-              echo "开始安装依赖..."
               if [ -f package-lock.json ]; then
-                echo "Found package-lock.json, trying npm ci first..."
-                if npm ci --legacy-peer-deps --production=false; then
-                  echo "✅ npm ci 成功"
-                else
-                  echo "❌ npm ci 失败，fallback to npm install"
-                  rm -f package-lock.json
-                  npm install --legacy-peer-deps
-                fi
+                npm ci --legacy-peer-deps
               else
-                echo "No package-lock.json, using npm install..."
                 npm install --legacy-peer-deps
               fi
-            
-            # 验证安装结果
-            - echo "=== ✅ 验证依赖安装 ==="
-            - |
-              if [ -d "node_modules" ]; then
-                echo "✅ node_modules 目录存在"
-                echo "依赖包数量: $(ls node_modules | wc -l 2>/dev/null || echo 'Unknown')"
-              else
-                echo "❌ node_modules 目录不存在!"
-                exit 1
-              fi
-            
-            # 检查关键依赖（非阻塞）
-            - echo "检查关键依赖:"
-            - npm list react react-dom next --depth=0 || echo "⚠️  某些依赖可能有版本问题，但继续构建"
-            
+              
         build:
           commands:
-            - echo "=== 🔨 开始构建 ==="
-            - echo "确认环境变量:"
-            - echo "NODE_ENV: $NODE_ENV"
-            - echo "REACT_APP_API_URL: $REACT_APP_API_URL"
-            - echo "NODE_OPTIONS: $NODE_OPTIONS"
-            
-            # 显示内存信息（如果可用）
-            - echo "系统资源信息:"
-            - free -h 2>/dev/null || echo "内存信息不可用"
-            - df -h . 2>/dev/null || echo "磁盘信息不可用"
-            
-            # 执行构建
-            - echo "执行构建命令: npm run build"
+            - echo "Starting build phase"
             - npm run build
-            
-            # 构建结果验证
-            - echo "=== ✅ 构建结果验证 ==="
-            - echo "构建完成，检查输出目录:"
             - ls -la
-            - |
-              # 智能检测构建输出目录
-              BUILD_SUCCESS=false
-              
-              if [ -d "out" ]; then
-                echo "✅ 找到 out/ 目录 (Next.js static export)"
-                echo "文件数量: $(find out -type f 2>/dev/null | wc -l)"
-                echo "目录大小: $(du -sh out/ 2>/dev/null || echo '大小计算失败')"
-                echo "主要文件:"
-                ls -la out/ | head -10
-                if [ -f "out/index.html" ]; then
-                  echo "✅ 找到 index.html"
-                  BUILD_SUCCESS=true
-                else
-                  echo "⚠️  未找到 index.html"
-                fi
-                
-              elif [ -d "build" ]; then
-                echo "✅ 找到 build/ 目录 (Create React App)"
-                echo "文件数量: $(find build -type f 2>/dev/null | wc -l)"
-                echo "目录大小: $(du -sh build/ 2>/dev/null || echo '大小计算失败')"
-                echo "主要文件:"
-                ls -la build/ | head -10
-                if [ -f "build/index.html" ]; then
-                  echo "✅ 找到 index.html"
-                  BUILD_SUCCESS=true
-                else
-                  echo "⚠️  未找到 index.html"
-                fi
-                
-              elif [ -d "dist" ]; then
-                echo "✅ 找到 dist/ 目录 (Vite/Vue/其他)"
-                echo "文件数量: $(find dist -type f 2>/dev/null | wc -l)"
-                echo "目录大小: $(du -sh dist/ 2>/dev/null || echo '大小计算失败')"
-                echo "主要文件:"
-                ls -la dist/ | head -10
-                if [ -f "dist/index.html" ]; then
-                  echo "✅ 找到 index.html"
-                  BUILD_SUCCESS=true
-                else
-                  echo "⚠️  未找到 index.html"
-                fi
-                
-              else
-                echo "❌ 未找到任何构建输出目录!"
-                echo "当前目录内容:"
-                ls -la
-                echo "请检查构建配置"
-                exit 1
-              fi
-              
-              if [ "$BUILD_SUCCESS" = true ]; then
-                echo "✅ 构建验证成功"
-              else
-                echo "⚠️  构建可能有问题，但尝试继续"
-              fi
-              
-        postBuild:
-          commands:
-            - echo "=== 🎉 构建完成 ==="
-            - echo "准备部署文件..."
-            - |
-              # 最终检查和报告
-              echo "=== 📊 构建报告 ==="
-              if [ -d "out" ]; then
-                echo "部署目录: out/"
-                echo "HTML文件: $(find out -name "*.html" | wc -l)"
-                echo "JS文件: $(find out -name "*.js" | wc -l)"
-                echo "CSS文件: $(find out -name "*.css" | wc -l)"
-              elif [ -d "build" ]; then
-                echo "部署目录: build/"
-                echo "HTML文件: $(find build -name "*.html" | wc -l)"
-                echo "JS文件: $(find build -name "*.js" | wc -l)"
-                echo "CSS文件: $(find build -name "*.css" | wc -l)"
-              elif [ -d "dist" ]; then
-                echo "部署目录: dist/"
-                echo "HTML文件: $(find dist -name "*.html" | wc -l)"
-                echo "JS文件: $(find dist -name "*.js" | wc -l)"
-                echo "CSS文件: $(find dist -name "*.css" | wc -l)"
-              fi
-            - echo "🚀 准备部署到 Amplify!"
             
       artifacts:
-        # 🔄 根据你的构建输出调整这里
-        # 如果是 build/ 目录，改为 build
-        # 如果是 dist/ 目录，改为 dist
         baseDirectory: build
         files:
           - '**/*'
-        excludePaths:
-          - node_modules/**/*
-          - .git/**/*
-          - .env*
-          - '*.log'
-          - package-lock.json
-          - '*.map'
           
       cache:
         paths:
           - node_modules/**/*
-          - .next/cache/**/*
-          - .npm/**/*
           
     appRoot: ./
